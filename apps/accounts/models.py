@@ -24,17 +24,27 @@ class User(Basemodel, AbstractUser):
         max_length=50,
         unique=True,
         verbose_name='Telegram user ID',
+        null=True,
+        blank=True
     )
     phone_number = models.CharField(
         max_length=50,
         unique=True,
         verbose_name='Phone_number',
-        validators=[
-            RegexValidator(
-                regex=r'^\+998\d{8}$',
-                message="Telefon raqami '+998912345678' kabi formatda bo'lishi kerak."
-            )
-        ]
+        # validators=[
+        #     RegexValidator(
+        #         regex=r'^\+998\d{8}$',
+        #         message="Telefon raqami '+998912345678' kabi formatda bo'lishi kerak."
+        #     )
+        # ],
+        null=True,
+        blank=True
+    )
+    sms_code = models.CharField(
+        max_length=6,
+        blank=True,
+        null=True,
+        verbose_name='SMS code'
     )
     groups = models.ManyToManyField(
         'auth.Group',

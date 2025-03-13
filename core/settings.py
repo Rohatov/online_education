@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -42,7 +43,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'social_django',
+    'ckeditor',
     'mptt',
+    'drf_yasg',
     #apps
     'apps.accounts',
     'apps.lesson',
@@ -58,6 +62,11 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ]
 }
+
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.telegram.TelegramAuth',
+    'django.contrib.auth.backends.ModelBackend',
+)
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -134,7 +143,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-TELEGRAM_BOT_TOKEN = "8111226311:AAGLEt9vhJf6sSozT94BxxvyF9AlstxkJM8"
+SOCIAL_AUTH_TELEGRAM_BOT_TOKEN = "8111226311:AAGLEt9vhJf6sSozT94BxxvyF9AlstxkJM8"
 TELEGRAM_BOT_USERNAME = "Online_Ebot"
 
 LANGUAGE_CODE = 'uz-uz'
@@ -150,6 +159,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT  = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'), ]
+
+MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -160,7 +175,7 @@ from datetime import timedelta
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # Access token uchun amal qilish muddati
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=200),  # Access token uchun amal qilish muddati
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),     # Refresh token uchun amal qilish muddati
     'ROTATE_REFRESH_TOKENS': False,                   # Refresh tokenni faqat bitta qayta ishlash
     'BLACKLIST_AFTER_ROTATION': True,                  # Token yangilangandan so'ng eskilarni blacklistga qo'shish
@@ -169,3 +184,8 @@ SIMPLE_JWT = {
     'SIGNING_KEY': 'your-secret-key',                  # Maxfiy kalit
     'LEEWAY': 0,                                       # Toleransiya (JWT vaqtini tekshirishda)
 }
+
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
+SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/'

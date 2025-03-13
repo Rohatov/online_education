@@ -1,7 +1,9 @@
 from rest_framework import serializers
-from apps.lesson.models import Lesson, Comment, Category, Video
+from apps.accounts.models import User
+from apps.lesson.models import Lesson, Comment, Category, Video, Section, Test, Rating
 
 class LessonSerializers(serializers.ModelSerializer):
+    # author = serializers.HiddenField(default=serializers.CurrentUserDefault())
     comment_count = serializers.SerializerMethodField()
     view_count = serializers.SerializerMethodField()
 
@@ -13,6 +15,37 @@ class LessonSerializers(serializers.ModelSerializer):
     def get_comment_count(obj):
         count = obj.comments.count()
         return count
+    
+    @staticmethod
+    def get_view_count(obj):
+        count = obj.video_views.count()
+        return count
+    
+
+class VideoSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Video
+        fields = '__all__'
+
+
+class TestSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Test
+        fields = '__all__'
+    
+
+class SectionSerializer(serializers.ModelSerializer):
+    videos = VideoSerializers(many=True)
+    tests = TestSerializers(many=True)
+    class Meta:
+        model = Section
+        fields = '__all__'
+
+class LessonDetailSerializers(serializers.ModelSerializer):
+    sections = SectionSerializer(many=True)
+    class Meta:
+        model = Lesson
+        fields = ['id', 'title', 'description', 'sections', 'comment_count', 'view_count', 'sections']
 
 
 class CommentSerializers(serializers.ModelSerializer):
@@ -20,14 +53,38 @@ class CommentSerializers(serializers.ModelSerializer):
         model = Comment
         fields = '__all__'
 
-    
-class VideoSerializers(serializers.ModelSerializer):
+
+class CategorySerializers(serializers.ModelSerializer):
+    is_active = serializers.BooleanField(default=True)
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+
+class LikeToLessonSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = '__all__'
+
+
+class LikeToRatingSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Rating
+        fields = '__all__'
+
+class RatingSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = '__all__'
+
+
+class ViewSerializers(serializers.ModelSerializer):
     class Meta:
         model = Video
         fields = '__all__'
 
 
-class CategorySerializers(serializers.ModelSerializer):
+class NewsSerializers(serializers.ModelSerializer):
     class Meta:
-        model = Category
+        model = Lesson
         fields = '__all__'

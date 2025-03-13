@@ -24,6 +24,6 @@ class LessonAdmin(admin.ModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ('author', 'lesson', 'create_at', 'parent')
-    list_filter = ('author', 'lesson', 'create_at')
-    search_fields = ('author', 'lesson', 'create_at')
+    list_display = ('author', 'video', 'create_at', 'parent')
+    list_filter = ('author', 'video', 'create_at')
+    search_fields = ('author', 'video', 'create_at')

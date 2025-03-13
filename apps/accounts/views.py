@@ -11,6 +11,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from apps.accounts.models import User
+from twilio.rest import Client
+import random
 
 
 class LogoutView(APIView):
@@ -23,48 +25,90 @@ class LogoutView(APIView):
         return Response({"message": "Logged out successfully"})
 
 
-def verify_telegram_auth(data):
-    """Telegramdan kelgan ma'lumotlarni tekshirish."""
-    bot_token = settings.TELEGRAM_BOT_TOKEN
-    secret_key = hashlib.sha256(bot_token.encode()).digest()
+class TelegramLoginView(APIView):
+    def post(self, request):
+        telegram_data = request.data  # Telegramdan kelgan ma'lumotlar
 
-    auth_data = {k: v for k, v in data.items() if k != 'hash'}
-    auth_data_sorted = sorted(auth_data.items())
-    data_check_string = "\n".join(f"{k}={v}" for k, v in auth_data_sorted)
-    
-    hmac_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
-    return hmac_hash == data.get('hash')
+        # Telegramdan kelgan ma'lumotlarni tekshirish
+        telegram_user_id = telegram_data.get('id')
+        first_name = telegram_data.get('first_name')
+        last_name = telegram_data.get('last_name')
+        username = telegram_data.get('username')
 
-class TelegramLoginAPIView(APIView):
-    """Telegram orqali foydalanuvchini autentifikatsiya qilish"""
-    permission_classes = [AllowAny]
+        if not telegram_user_id:
+            return Response({"error": "Telegram user ID talab qilinadi."}, status=status.HTTP_400_BAD_REQUEST)
 
-    def get(self, request):
-        data = request.query_params.dict()
-
-        # Ma'lumotlarni tekshiramiz
-        if not verify_telegram_auth(data):
-            return Response({"error": "Authentication failed"}, status=status.HTTP_400_BAD_REQUEST)
-
-        telegram_user_id = data.get("id")
-        first_name = data.get("first_name", "")
-        last_name = data.get("last_name", "")
-        username = data.get("username", "")
-
-        # Foydalanuvchini bazada qidiramiz yoki yaratamiz
+        # Foydalanuvchini ro'yxatdan o'tkazish yoki yangilash
         user, created = User.objects.get_or_create(
             telegram_user_id=telegram_user_id,
             defaults={
-                "first_name": first_name,
-                "last_name": last_name,
-                "username": username if username else f"tg-{telegram_user_id}"
+                'first_name': first_name,
+                'last_name': last_name,
+                'username': username or f'tg-{telegram_user_id}'  # Agar username bo'lmasa
             }
         )
 
-        # Foydalanuvchini tizimga kiritamiz
-        login(request, user)
+        if not created:
+            # Foydalanuvchi allaqachon mavjud bo'lsa, ma'lumotlarni yangilash
+            user.first_name = first_name
+            user.last_name = last_name
+            user.username = username or user.username
+            user.save()
 
-        return Response(
-            {"message": "Successfully logged in", "user_id": user.id, "username": user.username},
-            status=status.HTTP_200_OK
+        return Response({"message": "Muvaffaqiyatli ro'yxatdan o'tdingiz!", "user_id": user.id}, status=status.HTTP_200_OK)
+
+
+class SendSMSView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        phone_number = request.data.get('phone_number')
+        if not phone_number:
+            return Response({"error": "Telefon raqam kiritilmadi."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user, created = User.objects.get_or_create(phone_number=phone_number)
+
+        code = ''.join(random.choices('0123456789', k=6))
+        user.sms_code = code
+        user.save()
+
+        account_sid = 'AC61724543bdd36555dd3e5c768f99ab7c' 
+        auth_token = '9eb280209e2ec94f675a22dab7c07e33'    
+        client = Client(account_sid, auth_token)
+
+        message = client.messages.create(
+            body=f"Sizning tasdiqlash kodingiz: {code}",
+            from_='+18774474810',  
+            to=phone_number        
         )
+
+        return Response({"message": "SMS kodi yuborildi."}, status=status.HTTP_200_OK)
+    
+
+class VerifySMSView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        phone_number = request.data.get('phone_number')
+        code = request.data.get('code')
+        if not phone_number or not code:
+            return Response({"error": "Telefon raqam yoki kod kiritilmadi."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(phone_number=phone_number)
+        except User.DoesNotExist:
+            return Response({"error": "Foydalanuvchi topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.sms_code != code:
+            return Response({"error": "Noto'g'ri kod."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Kodning amal qilish muddatini tekshirish (masalan, 5 daqiqa)
+        # if timezone.now() - user.sms_code_created_at > timedelta(minutes=5):
+        #     return Response({"error": "Kodning amal qilish muddati tugagan."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Kodni tasdiqlash
+        user.sms_code = None  # Kodni tozalash
+        user.sms_code_created_at = None  # Vaqtni tozalash
+        user.save()
+
+        return Response({"message": "Kod tasdiqlandi."}, status=status.HTTP_200_OK)
