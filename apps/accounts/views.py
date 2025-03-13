@@ -13,6 +13,8 @@ from rest_framework import status
 from apps.accounts.models import User
 from twilio.rest import Client
 import random
+from dotenv import load_dotenv
+import os
 
 
 class LogoutView(APIView):
@@ -72,8 +74,8 @@ class SendSMSView(APIView):
         user.sms_code = code
         user.save()
 
-        account_sid = 'AC61724543bdd36555dd3e5c768f99ab7c' 
-        auth_token = '9eb280209e2ec94f675a22dab7c07e33'    
+        account_sid = os.getenv('TWILIO_ACCOUNT_SID') 
+        auth_token = os.getenv('TWILIO_AUTH_TOKEN')    
         client = Client(account_sid, auth_token)
 
         message = client.messages.create(

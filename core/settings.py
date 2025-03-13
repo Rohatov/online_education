@@ -21,10 +21,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%6z13ovd2#yvo46t55-rj_%s4h1qtp2i6gdqhohhgu8$2$&j4x'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
 
@@ -113,8 +113,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'online_education',  # Ma'lumotlar bazasining nomi
-        'USER': 'roxatov',  # PostgreSQL foydalanuvchi nomi
-        'PASSWORD': '933377448',  # PostgreSQL foydalanuvchi paroli
+        'USER': os.getenv('USER'),  # PostgreSQL foydalanuvchi nomi
+        'PASSWORD': os.getenv('PASSWORD'),  # PostgreSQL foydalanuvchi paroli
         'HOST': 'localhost',  # PostgreSQL server manzili
         'PORT': '5432',  # PostgreSQL porti (standart 5432)
     }
