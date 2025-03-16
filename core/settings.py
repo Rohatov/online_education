@@ -68,6 +68,8 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
+AUTH_USER_MODEL = "accounts.User"
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -189,3 +191,7 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
 SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/'
+
+SESSION_ENGINE = "django.contrib.sessions.backends.db"  # Baza orqali saqlash
+SESSION_COOKIE_HTTPONLY = False  # Postman cookie’ni ko‘ra olishi uchun
+SESSION_SAVE_EVERY_REQUEST = True

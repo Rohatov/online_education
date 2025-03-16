@@ -5,6 +5,7 @@ from django.core.validators import FileExtensionValidator
 from mptt.models import MPTTModel, TreeForeignKey
 from ckeditor.fields import RichTextField
 import moviepy as mp
+import os
 
 class Category(Basemodel):
     name = models.CharField(max_length=255)
@@ -50,14 +51,15 @@ class Section(Basemodel):
 
 
 class Video(Basemodel):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='videos')
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='videos')
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name='section_videos')
     title = models.CharField(max_length=255)
     video = models.FileField(upload_to='media/course/',
-    validators=[FileExtensionValidator(
-        allowed_extensions=['.mp4', '.avi', '.mov', '.mkv'],
-        message='Faqat quyidagi formatlardagi fayllar qabul qilinadi: MP4, AVI, MOV, MKV.'
-        )],
+        validators=[FileExtensionValidator(
+            allowed_extensions=['mp4', 'avi', 'mov', 'mkv'],
+            message='Faqat quyidagi formatlardagi fayllar qabul qilinadi: MP4, AVI, MOV, MKV.'
+            )],
     )
     duration = models.PositiveIntegerField(default=0, editable=False) 
 
@@ -68,13 +70,16 @@ class Video(Basemodel):
         """
         Video fayli yuklangandan so‘ng, avtomatik ravishda davomiyligini aniqlaydi.
         """
+        super().save(*args, **kwargs)
+
         if self.video:
+            os.environ["FFMPEG_LOGLEVEL"] = "quiet"
             video_path = self.video.path
             clip = mp.VideoFileClip(video_path)
             self.duration = round(clip.duration / 60)  
             clip.close()
+            super().save(update_fields=['duration'])
 
-        super().save(*args, **kwargs)
 
 
 class Test(Basemodel):

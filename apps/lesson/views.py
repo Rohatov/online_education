@@ -9,8 +9,8 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from apps.lesson.serializers import (LessonSerializers, CommentSerializers, VideoSerializers,
                                     CategorySerializers, LessonDetailSerializers, TestSerializers,
-                                    NewsSerializers, SectionSerializer, RatingSerializers, LikeToLessonSerializers,
-                                    LikeToRatingSerializers)
+                                    NewsSerializers, SectionSerializers, SectionDetailSerializers, 
+                                    RatingSerializers, LikeToLessonSerializers,LikeToRatingSerializers)
 # Create your views here.
 
 
@@ -100,9 +100,9 @@ class LessonDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = LessonDetailSerializers
 
-    def get_object(self, request, pk):
+    def get_object(self, pk):
         obj = get_object_or_404(Lesson, pk=pk)
-        self.check_object_permissions(request, obj)
+        self.check_object_permissions(self.request, obj)
         return obj
     
     def get(self, request, pk):
@@ -173,9 +173,9 @@ class VideoDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = VideoSerializers
 
-    def get_object(self, request, pk):
-        obj = get_object_or_404(Video, pk=pk)
-        self.check_object_permissions(request, obj)
+    def get_object(self, pk):
+        obj = get_object_or_404(Video, id=pk)
+        self.check_object_permissions(self.request, obj)
         return obj
     
     def get(self, request, pk):
@@ -196,6 +196,7 @@ class VideoDetailAPIView(APIView):
             serializer = self.serializer_class(instance=item, data=data, context={'request': request}, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
+            return Response({"msg": "video muvaffaqiyatli o'zgartirildi"}, status=status.HTTP_200_OK)
         else:
             data = {
                 'status': False,
@@ -252,9 +253,9 @@ class TestDetailApiView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TestSerializers
 
-    def get_object(self, request, pk):
+    def get_object(self, pk):
         obj = get_object_or_404(Test, id=pk)
-        self.check_object_permissions(request, obj)
+        self.check_object_permissions(self.request, obj)
         return obj
     
     def patch(self, request, pk):
@@ -321,9 +322,9 @@ class CommentDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = CommentSerializers
 
-    def get_object(self, request, pk):
+    def get_object(self, pk):
         obj = get_object_or_404(Lesson, pk=pk)
-        self.check_object_permissions(request, obj)
+        self.check_object_permissions(self.request, obj)
         return obj
     
     def get(self, request, pk):
@@ -332,7 +333,7 @@ class CommentDetailAPIView(APIView):
         return Response(serializer.data)
     
     def patch(self, request, pk):
-        item = Comment.objects.get(id=pk)
+        item = self.get_object(pk)
         if item.author == request.user:
             data = request.data
             serializer = self.serializer_class(instance=item, data=data, context={'request': request}, partial=True)
@@ -347,7 +348,7 @@ class CommentDetailAPIView(APIView):
             raise ValidationError(data)
 
     def put(self, request, pk):
-        item = Comment.objects.get(id=pk)
+        item = self.get_object(pk)
         if item.author == request.user:
             data = request.data
             serializer = self.serializer_class(instance=item, data=data, context={'request': request})
@@ -362,7 +363,7 @@ class CommentDetailAPIView(APIView):
             raise ValidationError(data)
         
     def delete(self, request, pk):
-        item = Comment.objects.get(id=pk)
+        item = self.get_object(pk)
         if item.author == request.user:
             item.delete()
             return Response({"msg": "sharh muvaffaqiyatli o'chirildi"})
@@ -413,9 +414,9 @@ class NewsDetailView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = NewsSerializers
 
-    def get_object(self, request, pk):
+    def get_object(self, pk):
         obj = get_object_or_404(News, pk=pk)
-        self.check_object_permissions(request, obj)
+        self.check_object_permissions(self.request, obj)
         return obj
     
     def get(self, request, pk):
@@ -468,7 +469,7 @@ class NewsDetailView(APIView):
 
 class SectionAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = SectionSerializer
+    serializer_class = SectionSerializers
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data, context={'request': request})
@@ -480,11 +481,11 @@ class SectionAPIView(APIView):
 
 class SectionDetailView(APIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = SectionSerializer
+    serializer_class = SectionDetailSerializers
 
-    def get_object(self, request, pk):
+    def get_object(self, pk):
         obj = get_object_or_404(Section, pk=pk)
-        self.check_object_permissions(request, obj)
+        self.check_object_permissions(self.request, obj)
         return obj
     
     def get(self, request, pk):
@@ -541,9 +542,9 @@ class RatingDetailView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = RatingSerializers
 
-    def get_object(self, request, pk):
+    def get_object(self, pk):
         obj = get_object_or_404(Rating, pk=pk)
-        self.check_object_permissions(request, obj)
+        self.check_object_permissions(self.request, obj)
         return obj
     
     def delete(self, request, pk):

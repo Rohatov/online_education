@@ -1,7 +1,7 @@
 from django.urls import path
 from apps.lesson.views import (CategoryAPIView, CategoryDetailAPIView, LessonAPIView, LessonDetailAPIView,
                                VideoAPIView, VideoDetailAPIView, TestApiView, TestDetailApiView, CommentAPIView,
-                               CommentDetailAPIView)
+                               CommentDetailAPIView, SectionAPIView, SectionDetailView)
 
 app_name = 'lesson'
 
@@ -16,4 +16,6 @@ urlpatterns = [
     path('test/<int:pk>/', TestDetailApiView.as_view(), name='test_detail'),
     path('comment/', CommentAPIView.as_view(), name='comment'),
     path('comment/<int:pk>/', CommentDetailAPIView.as_view(), name='comment_detail'),
+    path('section/', SectionAPIView.as_view(), name='section'),
+    path('section/<int:pk>/', SectionDetailView.as_view(), name='section_detail'),
 ]

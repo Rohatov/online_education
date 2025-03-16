@@ -8,17 +8,16 @@ import uuid
 import random
 # Create your models here.
 
-TEACHER, STUDENT = ('teacher', 'student')
-VIA_TELEGRAM, VIA_PHONE = ('via_telegram', 'via_phone')
+# TEACHER, STUDENT = ('teacher', 'student')
+VIA_PHONE = ('via_phone')
 
 class User(Basemodel, AbstractUser):
+    TEACHER = 'teacher'
+    STUDENT = 'student'
+
     USER_ROLES = (
-        (TEACHER, TEACHER),
-        (STUDENT, STUDENT) 
-    )
-    AUTH_TYPE_CHOICES = (
-        (VIA_TELEGRAM, VIA_TELEGRAM),
-        (VIA_PHONE, VIA_PHONE)
+        (TEACHER, "Teacher"),
+        (STUDENT, "Student")
     )
     telegram_user_id = models.CharField(
         max_length=50,
@@ -40,11 +39,16 @@ class User(Basemodel, AbstractUser):
         null=True,
         blank=True
     )
+    role = models.CharField(max_length=50, choices=USER_ROLES, default=STUDENT)
     sms_code = models.CharField(
         max_length=6,
         blank=True,
         null=True,
         verbose_name='SMS code'
+    )
+    is_verified = models.BooleanField(
+        default=False,
+        verbose_name='Verified'
     )
     groups = models.ManyToManyField(
         'auth.Group',
@@ -77,7 +81,7 @@ class User(Basemodel, AbstractUser):
 
     def clean(self):
         super().clean()
-        if not self.telegram_user_id and not self.phone_number:
+        if not self.is_superuser and not self.telegram_user_id and not self.phone_number:
             raise ValidationError("Telegram user ID yoki telefon raqami bo'lishi kerak.")
     
     def save(self, *args, **kwargs):

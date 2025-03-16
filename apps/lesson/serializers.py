@@ -3,12 +3,17 @@ from apps.accounts.models import User
 from apps.lesson.models import Lesson, Comment, Category, Video, Section, Test, Rating
 
 class LessonSerializers(serializers.ModelSerializer):
-    # author = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    comment_count = serializers.SerializerMethodField()
-    view_count = serializers.SerializerMethodField()
-
     class Meta:
         model = Lesson
+        fields = '__all__'
+    
+
+class VideoSerializers(serializers.ModelSerializer):
+    is_active = serializers.BooleanField(default=True)
+    view_count = serializers.SerializerMethodField()
+    comment_count = serializers.SerializerMethodField()
+    class Meta:
+        model = Video
         fields = '__all__'
 
     @staticmethod
@@ -20,21 +25,21 @@ class LessonSerializers(serializers.ModelSerializer):
     def get_view_count(obj):
         count = obj.video_views.count()
         return count
-    
-
-class VideoSerializers(serializers.ModelSerializer):
-    class Meta:
-        model = Video
-        fields = '__all__'
 
 
 class TestSerializers(serializers.ModelSerializer):
     class Meta:
         model = Test
         fields = '__all__'
+
+
+class SectionSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Section
+        fields = '__all__'
     
 
-class SectionSerializer(serializers.ModelSerializer):
+class SectionDetailSerializers(serializers.ModelSerializer):
     videos = VideoSerializers(many=True)
     tests = TestSerializers(many=True)
     class Meta:
@@ -42,7 +47,7 @@ class SectionSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class LessonDetailSerializers(serializers.ModelSerializer):
-    sections = SectionSerializer(many=True)
+    sections = SectionDetailSerializers(many=True)
     class Meta:
         model = Lesson
         fields = ['id', 'title', 'description', 'sections', 'comment_count', 'view_count', 'sections']
