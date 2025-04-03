@@ -3,140 +3,73 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, Ou
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
-import random
 from rest_framework import status
-from datetime import timedelta
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 from apps.accounts.models import User
-from twilio.rest import Client
+from apps.accounts.serializers import UserRegisterSerializer, VerifySmsSerializer, LoginSerializer
+from django.core.cache import cache
+from apps.accounts.utils import generate_code, send_sms
 
-def generate_code():
-    return str(random.randint(100000, 999999))
-
-def send_sms(phone_number, code, request):
-    """Telefon raqamga SMS yuborish funksiyasi."""
-    account_sid = 'AC61724543bdd36555dd3e5c768f99ab7c'
-    auth_token = '9eb280209e2ec94f675a22dab7c07e33'
-    client = Client(account_sid, auth_token)
-    
-    # message = client.messages.create(
-    #     body=f"Sizning tasdiqlash kodingiz: {code}",
-    #     from_='+18774474810',
-    #     to=phone_number
-    # )
-    
-    # print("SMS kodi yuborildi:", message.sid, code)
-    print("SMS kodi yuborildi:", code)
-    request.session[f"sms_time_{phone_number}"] = timezone.now().isoformat()
-    a = request.session[f"sms_time_{phone_number}"] = timezone.now().isoformat()
-    request.session.modified = True
-    b = request.session[f"sms_time_{phone_number}"] = timezone.now().isoformat()
-    print('######################################################')
-    print(a)
-    print('AAAAAA')
-    print(b)
-    return Response({"message": "SMS yuborildi",
-                     "phone_number": phone_number}, status=status.HTTP_200_OK)
 
 class RegisterView(APIView):
+    """register api da first_name"""
     permission_classes = [AllowAny]
-
+    serializer_class = UserRegisterSerializer
     def post(self, request):
-        first_name = request.data.get("first_name")
-        last_name = request.data.get("last_name")
-        role = request.data.get("role")
-        phone_number = request.data.get("phone_number")
-
-        if not all([first_name, last_name, role, phone_number]):
-            return Response({"error": "Barcha maydonlar talab qilinadi."}, status=status.HTTP_400_BAD_REQUEST)
-
-        if role not in [User.TEACHER, User.STUDENT]:
-            return Response({"error": "Noto‘g‘ri rol tanlandi."}, status=status.HTTP_400_BAD_REQUEST)
-
-        if User.objects.filter(phone_number=phone_number).exists():
-            return Response({"error": "Bu telefon raqam bilan ro‘yxatdan o‘tgan foydalanuvchi mavjud."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        user = User.objects.create(
-            first_name=first_name,
-            last_name=last_name,
-            phone_number=phone_number,
-            role=role,
-            is_verified=False
-        )
-        
-        sms_code = generate_code()
-        user.sms_code = sms_code
-        user.sms_code_created_at = timezone.now()
-        user.save()
-        
-        send_sms(phone_number, sms_code)
-        
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
         return Response({
             "message": "Ro‘yxatdan o‘tish muvaffaqiyatli yakunlandi. Iltimos, tasdiqlash kodini kiriting.",
-            "phone_number": phone_number
+            "phone_number": user.phone_number,
+            "sms_code": serializer.context.get('sms_code')
         }, status=status.HTTP_201_CREATED)
 
+
 class VerifySMSView(APIView):
+    """verify-sms api da phone_number va code kiritiladi"""
     permission_classes = [AllowAny]
-
+    serializer_class = VerifySmsSerializer
     def post(self, request):
-        phone_number = request.data.get('phone_number')
-        code = request.data.get('code')
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
         
-        if not phone_number or not code:
-            return Response({"error": "Telefon raqam yoki kod kiritilmadi."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            user = User.objects.get(phone_number=phone_number)
-        except User.DoesNotExist:
-            return Response({"error": "Foydalanuvchi topilmadi."}, status=status.HTTP_404_NOT_FOUND)
-        
-        sms_time_str = request.session.get(f"sms_time_{phone_number}")
-        print(sms_time_str)
-        print(phone_number)
-
-        sms_time = timezone.datetime.fromisoformat(sms_time_str)
-
-        # 5 daqiqadan eski bo‘lsa xatolik qaytarish
-        if timezone.now() - sms_time > timedelta(minutes=5):
-            return Response({"error": "SMS kodi eskirgan"}, status=400)
-
-        if user.sms_code != code:
-            return Response({"error": "Noto‘g‘ri kod."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        user.is_verified = True
-        user.sms_code = None
-        user.sms_time = None
-        user.save()
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-            "message": "Login muvaffaqiyatli amalga oshirildi."
-        }, status=status.HTTP_200_OK)
+            user.is_verified = True
+            user.sms_code = None
+            user.sms_time = None
+            user.save()
+            
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "message": "Sms muvaffaqiyatli tasdiqlandi"
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LoginView(APIView):
+    """Foydalanuvchi Login qilishda birnchi phone_number kiritiladi keyin foydalanuvchi raqamiga sms habar yuboriladi
+    undan keyin verify-sms api orqali sms tasdiqlanadi shundan song foydalanuvchiga refresh va acsess token beriladi"""
     permission_classes = [AllowAny]
+    serializer_class = LoginSerializer
 
     def post(self, request):
-        phone_number = request.data.get('phone_number')
+        serializer = self.serializer_class(data=request.data, context={'request': request})
 
-        if not phone_number:
-            return Response({"error": "Telefon raqam talab qilinadi."}, status=status.HTTP_400_BAD_REQUEST)
+        if serializer.is_valid():
+            user = serializer.context['user']
+            refresh = RefreshToken.for_user(user)
 
-        try:
-            user = User.objects.get(phone_number=phone_number)
-        except User.DoesNotExist:
-            return Response({"error": "Foydalanuvchi topilmadi."}, status=status.HTTP_404_NOT_FOUND)
-
-        sms_code = generate_code()
-        user.sms_code = sms_code
-        user.sms_code_created_at = timezone.now()
-        user.save()
-
-        send_sms(phone_number, sms_code)
+            return Response({
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                    "message": "Login muvaffaqiyatli amalga oshirildi."
+                }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LogoutView(APIView):

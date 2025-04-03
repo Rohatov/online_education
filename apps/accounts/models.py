@@ -3,10 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from apps.config.models import Basemodel
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
-# from apps.telegram_bot.bot import receive_contact
 import uuid
 import random
-# Create your models here.
 
 # TEACHER, STUDENT = ('teacher', 'student')
 VIA_PHONE = ('via_phone')
